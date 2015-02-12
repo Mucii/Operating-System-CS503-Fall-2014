@@ -1,0 +1,110 @@
+/*  main.c  - main */
+
+#include <xinu.h>
+#include <stdio.h>
+
+extern uint32 nsaddr;
+
+process	main(void)
+{
+
+
+	/* Start the network */
+
+	netstart();
+	/*
+	   kprintf("\n...creating a shell\n");
+	   recvclr();
+	   resume(create(shell, 8192, 50, "shell", 1, CONSOLE));
+	   */
+	/* Wait for shell to exit and recreate it */
+	/*
+	   while (TRUE) {
+	   receive();
+	   sleepms(200);
+	   kprintf("\n\nMain process recreating shell\n\n");
+	   resume(create(shell, 4096, 20, "shell", 1, CONSOLE));
+	   }
+	   */
+
+
+
+
+	/* main for HellowWorld*/
+	   void* helloworld = load_program("helloworld");
+	   kprintf("helloworld addr return %d\n",helloworld);
+	   pid32 hi;
+
+	   hi = create(helloworld,4096,20,"helloworld",2,0,NULL);
+	   kprintf("hi %d\n",hi);
+	   resume(hi);
+	   kprintf("Done");
+	   return OK;
+	   //*/
+
+
+
+
+
+	/* Test case for the hashmap implementations
+
+	   kprintf("IIII");
+	   map_t mymap = hashmap_new();	
+	   kprintf("mymap address: %d\n", mymap);
+
+	   char *str = "Helloworld";
+	   int val = 100;
+
+	   kprintf("put\n");
+	   int rl = hashmap_put(mymap,str,val);
+	   if (rl != MAP_OK){
+	   kprintf("put failure");
+	   return OK;
+	   }
+	   char *str1 = "Helloworld2";
+	   int val1 = 101;
+	   int rl1 = hashmap_put(mymap,str1,val1);
+	   kprintf("put2\n");
+	   if (rl1 != MAP_OK){
+	   kprintf("put failure2");
+	   return OK;
+	   }
+	   int *arg=0;
+	   int rl2 = hashmap_get(mymap,str,arg);
+	   kprintf("get\n");
+	   if (rl2 != MAP_OK){
+	   kprintf("get failure");
+	   return OK;
+	   }
+	   else kprintf("arg: %d\n",*arg);
+	   int *arg1=0;
+	   int rl3 = hashmap_get(mymap,str1,arg1);
+	   kprintf("get2\n");
+	   if (rl3 != MAP_OK){
+	   kprintf("get2 failure");
+	   return OK;
+	   }
+	   else kprintf("arg1: %d\n",*arg1);
+	   int len = hashmap_length(mymap);
+	   kprintf("length :%d\n",len);
+	   return OK;
+	   */
+
+	/* Test case for part two load_library*/
+	//int myvalue = 2;
+
+	/* Load the library */
+	//if(load_library("myadd") == SYSERR) {
+	//	return SYSERR;
+	//}
+
+	/* Find the add1 function */
+	//int32 (*add1)(int32) = find_library_function("add1");
+	//if((int32)add1 == SYSERR) {
+	//	return SYSERR;
+	//}
+
+	/* Call the function */
+	//kprintf("final result of add1: %d\n",add1(myvalue));
+	//return OK;
+}

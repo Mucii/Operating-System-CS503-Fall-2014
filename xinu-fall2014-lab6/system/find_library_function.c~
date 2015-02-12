@@ -1,0 +1,25 @@
+/* find_library_function.c - find_library_function */
+
+#include <xinu.h>
+
+/*------------------------------------------------------------------------
+ *  find_library_function  -  Locate a dynamically loaded library function
+ *------------------------------------------------------------------------
+ */
+void*	find_library_function(
+	  char		*name		/* Function name to locate	*/
+        )
+{
+	struct procent *prptr;
+	prptr = &proctab[currpid];
+	int32 len_hash;
+	len_hash = hashmap_length(prptr->pr_hashtab);
+	if(len_hash==0) return (void*) SYSERR;
+	int32 *arg;
+	arg = NULL;
+	if(hashmap_get(prptr->pr_hashtab,name,arg)==MAP_OK){
+		kprintf("find the name!\n");
+		return arg;
+	}
+	return (void*)SYSERR;
+}

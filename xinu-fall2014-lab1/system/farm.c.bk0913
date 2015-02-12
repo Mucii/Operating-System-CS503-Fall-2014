@@ -1,0 +1,245 @@
+/*  farm.c  - definition of farmer and vegetarian lab */
+#include <xinu.h>
+#include "farm.h"
+/*------------------------------------------------------------------------
+ *  start_farm  -  Initializes and starts the farm simulation
+ *------------------------------------------------------------------------
+ */
+#include <stdio.h>
+#include <stdlib.h>
+ 
+struct buffer {
+	int size;
+    int start;
+    //int end;  // position of last element
+    /* Tracking start and end of buffer would waste
+     * one position. A full buffer would always have
+     * to leave last position empty or otherwise
+     * it would look empty. Instead this buffer uses
+     * count to track if buffer is empty or full
+     */
+    int count; // number of elements in buffer
+    /* Two ways to make buffer element type opaque
+     * First is by using typedef for the element
+     * pointer. Second is by using void pointer.
+     */
+    /* different types of buffer:
+    int *element;   // array of integers
+    char *element;  // array of characters
+    void *element;  // array of void type (could cast to int, char, etc)
+    char **element; //array of char pointers (array of strings)
+    void **element; // array of void pointers
+    Choosing array of void pointers since it's the most flexible */
+    void *element[FIELDSIZE];
+};
+sid32 prod_sema,cons_sema;
+typedef struct buffer buffer_t;
+sid32 farmer[NFARMERS];
+pid32 prc_farmer[NFARMERS];
+sid32 vegetarian[NVEGETARIANS];
+pid32 prc_vege[NVEGETARIANS];
+buffer_t *buf_r[NVEGETARIANS];
+void init_buffer(buffer_t *buffer, int size) {
+    buffer->size = size;
+    buffer->start = 0;
+    buffer->count = 0;
+    //buffer->element = malloc(sizeof(buffer->element)*size);
+    /* allocated array of void pointers. Same as below */
+    //buffer->element = malloc(sizeof(void *) * size);
+     
+}
+
+
+int full(buffer_t *buffer) {
+    if (buffer->count == buffer->size) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+ 
+int empty(buffer_t *buffer) {
+    if (buffer->count == 0) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+     
+void push(buffer_t *buffer, void *data) {
+    int index;
+    if (full(buffer)) {
+        printf("Buffer overflow\n");
+    } else {
+        index = buffer->start + buffer->count++;
+        if (index >= buffer->size) {
+            index = 0;
+        }
+        buffer->element[index] = data;
+    }
+}
+ 
+ 
+void * popqueue(buffer_t *buffer) {
+	void * element;
+	if (empty(buffer)) {
+		printf("Buffer underflow\n");
+		return "0";
+	} else {
+		/* FIFO implementation */
+		element = buffer->element[buffer->start];
+		buffer->start++;
+		buffer->count--;
+		if (buffer->start == buffer->size) {
+			buffer->start = 0;
+		}
+
+		return element;
+	}
+}
+ 
+void * popstack(buffer_t *buffer) {
+	int index;
+	if (empty(buffer)) {
+		printf("Buffer underflow\n");
+		return "0";
+	} else {
+		/* LIFO implementation */
+		index = buffer->start + buffer->count - 1;
+		if (index >= buffer->size) {
+			index = buffer->count - buffer->size - 1;
+		}     
+		buffer->count--;
+		return buffer->element[index];
+	}
+}
+ 
+void prod(sid32 selfsema,sid32 othersema, buffer_t *buf, char tags, int times){
+	kprintf("prod\n");	
+	if(full(buf)){
+		//skip this process	
+	} else{
+		wait(selfsema);
+		push(buf, tags);
+		signal(othersema);
+		sleep(times);
+	
+	}
+
+}
+void cons(sid32 selfsema, sid32 othersema, buffer_t *buf, char tags, int hungers, int times){
+	kprintf("cons\n");
+	if(empty(buf)){
+		//skip this process	
+	}
+	else{
+		int j;
+		wait(selfsema);
+		for (j=0; j<times;j++){
+			char temp;	
+			temp = popqueue(buf);	
+			push(buf_r, temp);
+		}
+
+		signal(othersema);
+		sleep(times);
+		
+	}
+	
+
+}
+void start_farm(void)
+{
+	kprintf("start\n");	
+	buffer_t *buf;
+	init_buffer(buf, FIELDSIZE);
+	prod_sema = semcreate(1);
+	kprintf("%d\n",prod_sema);
+	cons_sema = semcreate(0);
+	kprintf("%d\n",cons_sema);
+	int bufsize = FIELDSIZE; 
+	init_buffer(buf_r, bufsize);
+	int i,j,i1,i2;
+	kprintf("111\n");	
+	prc_farmer[0] = create(prod, 512, 20, 5, "farmer1", prod_sema, cons_sema, buf, farmer_tags[0], farmer_grow_times[0]);
+	resume(prc_farmer[0]);
+	kprintf("222\n");	
+	prc_vege[1] = create(cons, 512, 20, 5, "farmer2", prod_sema, cons_sema, buf, farmer_tags[1], farmer_grow_times[1],vegetarian_sleep_times[j]);
+	resume(prc_farmer[1]);
+	kprintf("333\n");
+	prc_farmer[2] = create(prod, 512, 20, 5, "farmer3", prod_sema, cons_sema, buf, farmer_tags[2], farmer_grow_times[2]);
+	resume(prc_farmer[2]);
+	//for(i=0; i<1; i++){
+	//	prc_farmer[i] = create(prod, 1024, 20, 5, "farmer", prod_sema, cons_sema, buf, farmer_tags[i], farmer_grow_times[i]);
+	//	kprintf("process start prod\n");
+	//}
+	for( j=0; j<NVEGETARIANS; j++){
+	        prc_vege[j] = create(cons, 1024, 20, 6, "vegetarian", cons_sema, prod_sema, buf, vegetarian_tags[j], vegetarian_hungers[j], vegetarian_sleep_times[j]);
+		kprintf("process start cons\n");
+	}
+	while(1){
+		for(i1=0; i1<NFARMERS; i1++){
+			resume(prc_farmer[i1]);	
+			kprintf("resume here farmers\n");
+		}
+		for( i2=0; i2<NVEGETARIANS; i2++){
+			resume(prc_vege[i2]);	
+			kprintf("resume here vegetarians\n");
+		}
+	}
+}
+
+/*------------------------------------------------------------------------
+ *  stop_farm  -  Stops the currently executing farm simulation
+ *------------------------------------------------------------------------
+ */
+void stop_farm(void)
+{
+	kprintf("start to stop\n");	
+	semdelete(prod_sema);
+	semdelete(cons_sema);
+	int i,i1;
+	for( i=0; i<NFARMERS; i++){
+		kill(prc_farmer[i]);
+	}
+	for( i1=0; i1<NVEGETARIANS; i1++){
+		kill(prc_vege[i1]);
+
+	}
+}
+
+
+/*------------------------------------------------------------------------
+ *  print_farm_report  -  Prints the final report for the farm simulation
+ *------------------------------------------------------------------------
+ */
+void print_farm_report(void)
+{
+	kprintf("start to print\n");		
+	int i,j,i1,i2;
+	int num_f[NFARMERS] = {0};
+	int num_v[NVEGETARIANS][NFARMERS] = {0};
+	for(i = 0; i<NVEGETARIANS; i++){
+		while(!empty(buf_r[i])){
+			char temp;
+			temp = popqueue(buf_r[i]);
+			for(j = 0;j<NFARMERS; j++){
+				if(temp == farmer_tags[j]){ 
+					num_v[i][j]++;
+					num_f[j]++;};
+			}
+		}
+	}
+
+	for(i2 = 0; i2<NFARMERS; i2++){
+		kprintf("Farmer %s:sold %i carrots\n",farmer_tags[i2], num_f[i]);
+
+	}
+	for(i1 = 0; i1<NVEGETARIANS; i1++){
+		kprintf("Vegetarian %s: ",vegetarian_tags[i1]);
+		for(j = 0; j<NFARMERS;j++){
+			kprintf("%i from farmer %s", num_v[i1][j],farmer_tags[j]);
+		}
+		kprintf("\n");
+	}
+}

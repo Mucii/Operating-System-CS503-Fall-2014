@@ -1,0 +1,85 @@
+#include <xinu.h>
+#include <string.h>
+#include <stdio.h>
+// ls implementation
+shellcmd ls(int nargs, char *args[]){
+
+  if(nargs>2){
+    fprintf(stderr, "%s: too many arguments\n", args[0]);
+    return 1;
+  }
+  if(nargs==2 && strncmp(args[1],"--help",7)==0){
+    printf("Usage: %s\n\n", args[0]);
+    printf("Description:\n");
+    printf("\tShow the stuff in direcotories\n");
+    printf("Options (one per invocation):\n");
+    printf("\tdirectory_name\tto show the files and directories in that directory\n");
+    printf("\tno parameter\tto show the files and directories in current directory\n");
+    printf("\tdirectories ends with 'l',otherwise it's a file\n");
+    return 1;
+  }
+  if(nargs==2){
+    kprintf("Open pointed directory\n");
+    int32 dirfd = open(RFILESYS,args[1],"ro");
+    if (dirfd == SYSERR){
+      kprintf("No Such Directory or File\n");
+      return 0;
+    }
+    struct rfdirent rfdentry;
+    while(1){
+      kprintf("loop");
+      int32 rc = read(dirfd, (char *)&rfdentry, sizeof(struct rfdirent));
+      	kprintf("rfdentry: %d, rc: %d\n",rfdentry,rc);
+      if(rc == SYSERR) { /* error accured while reading */
+	kprintf("Error when reading file in directory\n");
+	return 0;
+      } 
+      else if(rc == 0) { /* Reached end of list */
+	kprintf("break!%d\n",rc);
+	break;
+      }
+      else { /* Handle next entry in the directory */
+	if((int32)(rfdentry.d_type)==RF_DIRENT_FILE){
+	  kprintf("this is a file! cannot ls\n");
+	  break;
+	}
+
+	else kprintf("%s/\n",rfdentry.d_name);
+	kprintf("here!");
+      }
+    }
+    return 1;
+  }
+  kprintf("Open current directory\n");
+  int32 dirfd = open(RFILESYS,".","ro");
+  if (dirfd == SYSERR){
+      kprintf("Open Error when ls current directory\n");
+      return 0;
+    }
+  struct rfdirent rfdentry;
+    while(1){
+kprintf("loop2");
+      int32 rc = read(dirfd, (char *)&rfdentry, sizeof(struct rfdirent));
+      	kprintf("rfdentry: %d, rc: %d\n",rfdentry,rc);
+      if(rc == SYSERR) { /* error accured while reading */
+	kprintf("Error when reading file in directory\n");
+	return 0;
+      } 
+      else if(rc == 0) { /* Reached end of list */
+	kprintf("break!%d\n",rc);
+	break;
+      }
+      else { /* Handle next entry in the directory */
+	kprintf("jhifdo");
+	kprintf("type: %d\n",&rfdentry.d_type);
+	if((int32)(&rfdentry.d_type)==RF_DIRENT_FILE){
+	  kprintf("inside");
+	  kprintf("%s\n",&rfdentry.d_name);
+	}
+	
+	else kprintf("%s/\n",&rfdentry.d_name);
+kprintf("hahahah");
+      }
+    }
+    return 1;
+}
